@@ -1,47 +1,33 @@
 # Emu68Cast
 
-A bare-metal HDMI casting service for Pistorm, built on Emu68.
+Emu68Cast is a video-streaming service for PiStorm, built on Emu68. It captures RTG video or native Amiga video through Framethrower and streams H.264 over the Raspberry Pi's Wi-Fi to Kodi or VLC.
 
-The service runs on CPU core 3 in reserved memory and is loaded separately as `Emu68Cast.bin`. The Emu68 loader validates the image, reserves its memory and starts the service. The design aims to keep changes to the Emu68 core as small as possible, with capture, encoding and networking implemented in the separate service. Source includes display capture, experimental H.264 encoding and Wi-Fi/IPv4/UDP support, plus Amiga diagnostics and preferences tools.
+The service runs on core 3 and stays available between streaming sessions. Amiga tools provide MUI preferences, start/stop control, diagnostics and logging.
 
-Emu68Cast captures RTG output and, when Framethrower is installed, native Amiga video.
+Wi-Fi runs on the PiStorm side and is dedicated to Emu68Cast. The Wi-Fi interface is unavailable to AmigaOS while the service is running.
 
-Emu68Cast is designed as a separate, optional service rather than a feature incorporated into Emu68 or Framethrower. Its integration is intended to preserve the normal operation of both projects.
+## Hardware
 
-Hardware testing has verified bounded RTG encoding. Continuous network streaming remains experimental and is not yet hardware validated.
+The target is Raspberry Pi 3. Framethrower is required for native Amiga video capture.
 
-Initially designed for use with Kodi, with support for additional services planned for future versions.
+## Service status — 25 September 2026
 
-Tested on PiStorm Classic with a Raspberry Pi 3B+ and Framethrower. Raspberry Pi 4 and Compute Module 4 (CM4) are expected to work but have not yet been verified. Ethernet connectivity is planned for a future version.
+Wi-Fi streaming, separate Kodi/VLC profiles, preferences, startup options and session controls are implemented. Kodi supports optional automatic playback control.
 
-## Source
+Automatic resolution changes and switching between RTG and Framethrower during streaming are implemented and need testing.
 
-- `emu68cast/service/`: service entry point and display capture.
-- `src/emu68cast/`: loader and encoder integration.
-- `emu68cast/experimental/`: networking and stream components.
-- `emu68cast/amiga/`: diagnostics and preferences.
-- `emu68cast/shared/`, `include/emu68cast.h`: settings and shared interface.
-- `emu68cast/tests/`, `emu68cast/tools/`: tests and build/support tools.
+The experimental service bridge is intended to provide two-way communication between the Emu68Cast service and AmigaOS, with ARexx support for control, automation and testing. It still needs verification and testing.
 
-## Build and load
+Automatic recovery when the video source becomes temporarily unavailable is implemented, but needs testing.
 
-Initialize the submodules with `git submodule update --init --recursive`. Build with CMake and the supplied AArch64 cross-toolchain, selecting `TARGET=raspi64`, `VARIANT=pistorm-classic` and `EMU68CAST_BOOTSTRAP=ON`. The service builds alongside the kernel. Experimental encoder and radio modes require their matching build options and device assets.
+Development and hardware testing are ongoing. Sustained frame rates, latency and receiver playback still need further measurement.
 
-Load `Emu68Cast.bin` after the Kickstart ROM in `initramfs` and enable the `emu68cast` overlay. See `documentation/overlays.md` for memory options. Build Amiga tools separately using `emu68cast/amiga/Makefile` and an Amiga cross-compiler.
+## Planned work
 
-Upstream source and license notices are retained. See `LICENSE`.
+- Ethernet support alongside Wi-Fi.
 
-## Wi-Fi usage
-
-Emu68Cast takes exclusive control of the Raspberry Pi’s onboard Wi-Fi while the service is running. The Wi-Fi interface is dedicated to Emu68Cast and cannot be used simultaneously by AmigaOS.
-
-## Settings and passwords
-
-The Amiga preferences tool, `Emu68CastPrefs`, saves Wi-Fi credentials, the Kodi address and control port, and optional Kodi login details to `EMU68BOOT:Emu68Cast.cfg`. Settings stay separate from the service executable and can be changed without rebuilding it.
-
-Load the settings at startup by adding `Emu68Cast.cfg` immediately after `Emu68Cast.bin` on the existing `initramfs` line. A matching loader/service and a full Pi restart are required to apply boot settings.
-
-Passwords are visible in the editor and stored unencrypted on the SD card. At startup, the loader validates the settings, copies them into private reserved memory outside the Amiga diagnostic mapping, and clears the original settings trailer. Credentials are excluded from diagnostic output, boot logs and device-tree properties. This reduces accidental exposure; it does not protect against SD-card or privileged-memory access. Encryption of stored credentials is planned for a future version.
+- Automatic frame-rate selection where feasible: RTG 60/30 fps and PAL Framethrower 50/25 fps, based on measured performance.
+- Further performance testing and improvements with Kodi and VLC.
 
 ## Acknowledgments
 
